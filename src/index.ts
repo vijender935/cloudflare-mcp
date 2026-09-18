@@ -8,6 +8,7 @@
  *  - search_images   → GET /search?q=
  *  - process_image   → POST /process
  *  - list_r2_objects → GET /r2
+ *  - get_image       → GET /image?key=
  *
  * Deploy: npm run deploy
  * Connect clients to: https://cloudflare-mcp.<your-subdomain>.workers.dev/mcp
@@ -59,6 +60,42 @@ async function callWorker(
     );
   }
   return data;
+}
+
+async function callWorkerImage(
+  worker: Fetcher,
+  path: string
+): Promise<{ data: string; mimeType: string }> {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const request = new Request(`https://ai-images-pilot.internal${normalizedPath}`);
+  const res = await worker.fetch(request);
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    let message = errorText;
+    try {
+      const errorData = JSON.parse(errorText);
+      message = errorData?.error || errorText;
+    } catch {}
+    throw new Error(
+      `Worker responded ${res.status}: ${message || res.statusText}`
+    );
+  }
+
+  const contentType =
+    res.headers.get("Content-Type") || "application/octet-stream";
+  const bytes = new Uint8Array(await res.arrayBuffer());
+
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+
+  return {
+    data: btoa(binary),
+    mimeType: contentType.split(";")[0].trim(),
+  };
 }
 
 function createServer(env: Env) {
@@ -164,6 +201,39 @@ function createServer(env: Env) {
       });
       return {
         content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      };
+    }
+  );
+
+  server.tool(
+    "get_image",
+    "Retrieve an image from the private ai-images R2 bucket and return it as MCP image content. Pass the exact R2 object key from search_images or list_r2_objects.",
+    {
+      key: z
+        .string()
+        .min(1)
+        .describe("Exact R2 object key of the image"),
+    },
+    async ({ key }) => {
+      const params = new URLSearchParams({ key });
+      const image = await callWorkerImage(worker, `/image?${params.toString()}`);
+
+      return {
+        content: [
+          {
+            type: "image",
+            data: image.data,
+            mimeType: image.mimeType,
+          },
+          {
+            type: "text",
+            text: JSON.stringify(
+              { key, mimeType: image.mimeType },
+              null,
+              2
+            ),
+          },
+        ],
       };
     }
   );
