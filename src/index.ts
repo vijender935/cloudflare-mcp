@@ -13,7 +13,7 @@
  * Connect clients to: https://cloudflare-mcp.<your-subdomain>.workers.dev/mcp
  */
 
-import { createMcpHandler } from "agents/mcp";
+import { createLegacyMcpHandler } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
@@ -187,7 +187,7 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     // Create a fresh server instance per request so tools close over the correct env
     const server = createServer(env);
-    const handler = createMcpHandler(server);
+    const handler = createLegacyMcpHandler(server);
     return handler(request, env, ctx);
   },
 };
