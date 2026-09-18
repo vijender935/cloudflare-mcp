@@ -18,30 +18,32 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
 export interface Env {
-  AI_IMAGES_WORKER_URL: string;
+  /** Cloudflare Service Binding to the ai-images-pilot Worker. */
+  AI_IMAGES: Fetcher;
 }
 
 /**
- * Helper: call the upstream ai-images-pilot Worker
+ * Helper: call the upstream ai-images-pilot Worker through a Cloudflare
+ * Service Binding. This removes the dependency on a public Worker URL.
  */
 async function callWorker(
-  baseUrl: string,
+  worker: Fetcher,
   path: string,
   options: RequestInit = {}
 ): Promise<any> {
-  const base = (baseUrl || "").replace(/\/$/, "");
-  if (!base) {
-    throw new Error("AI_IMAGES_WORKER_URL is not configured");
-  }
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const request = new Request(
+    `https://ai-images-pilot.internal${normalizedPath}`,
+    {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+      },
+    }
+  );
 
-  const url = `${base}${path.startsWith("/") ? path : `/${path}`}`;
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
-  });
+  const res = await worker.fetch(request);
 
   const text = await res.text();
   let data: any;
@@ -65,14 +67,14 @@ function createServer(env: Env) {
     version: "1.0.0",
   });
 
-  const workerUrl = env.AI_IMAGES_WORKER_URL;
+  const worker = env.AI_IMAGES;
 
   server.tool(
     "health",
     "Check health / status of the ai-images-pilot Worker and its bindings (AI, DB, R2, Vectorize).",
     {},
     async () => {
-      const data = await callWorker(workerUrl, "/health");
+      const data = await callWorker(worker, "/health");
       return {
         content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
       };
@@ -108,7 +110,7 @@ function createServer(env: Env) {
       if (status) params.set("status", status);
 
       const qs = params.toString() ? `?${params.toString()}` : "";
-      const data = await callWorker(workerUrl, `/images${qs}`);
+      const data = await callWorker(worker, `/images${qs}`);
       return {
         content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
       };
@@ -132,7 +134,7 @@ function createServer(env: Env) {
       const params = new URLSearchParams({ q });
       if (topK !== undefined) params.set("topK", String(topK));
 
-      const data = await callWorker(workerUrl, `/search?${params.toString()}`);
+      const data = await callWorker(worker, `/search?${params.toString()}`);
       return {
         content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
       };
@@ -156,7 +158,7 @@ function createServer(env: Env) {
       if (r2_key) body.r2_key = r2_key;
       if (id) body.id = id;
 
-      const data = await callWorker(workerUrl, "/process", {
+      const data = await callWorker(worker, "/process", {
         method: "POST",
         body: JSON.stringify(body),
       });
@@ -171,7 +173,7 @@ function createServer(env: Env) {
     "List raw objects currently stored in the ai-images R2 bucket (helper for discovering unprocessed images).",
     {},
     async () => {
-      const data = await callWorker(workerUrl, "/r2");
+      const data = await callWorker(worker, "/r2");
       return {
         content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
       };
