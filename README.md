@@ -2,6 +2,10 @@
 
 Remote **Model Context Protocol (MCP)** server that exposes your existing **ai-images-pilot** Cloudflare Worker as a set of tools any MCP client (Claude, Cursor, Windsurf, Workers AI Playground, etc.) can call.
 
+## Connection to ai-images-pilot
+
+The MCP server connects to `ai-images-pilot` through the Cloudflare Service Binding `AI_IMAGES`. No public upstream Worker URL or `AI_IMAGES_WORKER_URL` variable is required.
+
 ## What this connects to
 
 Your account already has:
@@ -30,9 +34,8 @@ Worker endpoints wrapped by this MCP server:
 # 1. Install
 npm install
 
-# 2. (Optional) set the upstream Worker URL
-#    Default is already set in wrangler.toml
-#    AI_IMAGES_WORKER_URL = "https://ai-images-pilot.vijender935.workers.dev"
+# 2. AI_IMAGES service binding is configured in wrangler.toml
+#    AI_IMAGES → ai-images-pilot
 
 # 3. Local development
 npm run dev
@@ -86,7 +89,8 @@ npx -y mcp-remote@latest https://cloudflare-mcp.vijender935.workers.dev/mcp
 ```
 MCP Client  →  /mcp  →  this Worker (cloudflare-mcp)
                               │
-                              ▼  HTTP
+                              │ Service Binding: AI_IMAGES
+                              ▼
                      ai-images-pilot Worker
                               │
               ┌───────────────┼───────────────┐
@@ -96,7 +100,8 @@ MCP Client  →  /mcp  →  this Worker (cloudflare-mcp)
 
 ## Customisation
 
-- Change the upstream URL via the `AI_IMAGES_WORKER_URL` var in `wrangler.toml` or the Cloudflare dashboard.
+- The upstream Worker is selected by the `AI_IMAGES` Service Binding in `wrangler.toml`.
+- No `AI_IMAGES_WORKER_URL` environment variable is required.
 - Add more tools by editing `src/index.ts` (follow the existing `server.tool(...)` pattern).
 - For production, consider switching from public HTTP to a **service binding** to the `ai-images-pilot` Worker (zero latency, no public exposure).
 
