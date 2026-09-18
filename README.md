@@ -108,3 +108,8 @@ MCP Client  →  /mcp  →  this Worker (cloudflare-mcp)
 ## License
 
 MIT
+
+
+## Deployment
+
+Deployment is managed by Cloudflare Builds from the `main` branch.
