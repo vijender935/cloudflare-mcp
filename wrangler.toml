@@ -3,14 +3,8 @@ main = "src/index.ts"
 compatibility_date = "2025-05-01"
 compatibility_flags = ["nodejs_compat"]
 
-# Optional: set your Workers subdomain if needed
-# workers_dev = true
-
-[vars]
-# Base URL of the ai-images-pilot Worker (override via dashboard or .dev.vars)
-AI_IMAGES_WORKER_URL = "https://ai-images-pilot.vijender935.workers.dev"
-
-# For production you can bind secrets or use service bindings instead of HTTP calls
-# [[services]]
-# binding = "AI_IMAGES"
-# service = "ai-images-pilot"
+# Cloudflare-native Worker-to-Worker communication.
+# The binding is already connected in the Cloudflare dashboard.
+[[services]]
+binding = "AI_IMAGES"
+service = "ai-images-pilot"
