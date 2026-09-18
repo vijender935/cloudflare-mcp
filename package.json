@@ -1,0 +1,32 @@
+{
+  "name": "cloudflare-mcp",
+  "version": "1.0.0",
+  "description": "Cloudflare MCP server that exposes the ai-images-pilot Worker API (health, images catalog, semantic search, process, R2) via Model Context Protocol",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "start": "wrangler dev",
+    "cf-typegen": "wrangler types"
+  },
+  "keywords": [
+    "cloudflare",
+    "mcp",
+    "model-context-protocol",
+    "workers",
+    "ai-images"
+  ],
+  "author": "vijender935",
+  "license": "MIT",
+  "dependencies": {
+    "agents": "^0.0.95",
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250620.0",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.20.0"
+  }
+}
